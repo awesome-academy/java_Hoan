@@ -1,0 +1,28 @@
+# Maven
+target/
+*.jar
+*.war
+*.ear
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.class
+
+# Spring Boot logs
+*.log
+logs/
+
+# Uploaded files (local storage — not committed to git)
+uploads/
+src/main/resources/static/uploads/
+
+# Environment / secrets
+application-local.yml
+application-prod.yml
+.env
+
+# OS
+.DS_Store
+Thumbs.db
