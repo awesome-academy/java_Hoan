@@ -23,6 +23,8 @@ application-local.yml
 application-prod.yml
 .env
 
+docs/postman/
+
 # OS
 .DS_Store
 Thumbs.db
