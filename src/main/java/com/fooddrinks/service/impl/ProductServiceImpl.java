@@ -21,6 +21,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
@@ -104,15 +106,25 @@ public class ProductServiceImpl implements ProductService {
     public ProductResponse addImage(Long productId, MultipartFile file, boolean isPrimary) {
         Product product = findActiveOrThrow(productId);
 
-        // Unset ALL existing primary images for this product to guarantee only one
-        // isPrimary=true
+        // Single atomic UPDATE — safe under concurrent isPrimary=true uploads.
+        // Replaces the old findAll+saveAll pattern which had a race window.
         if (isPrimary) {
-            List<ProductImage> existingPrimaries = productImageRepository.findAllByProductIdAndIsPrimaryTrue(productId);
-            existingPrimaries.forEach(existing -> existing.setIsPrimary(false));
-            productImageRepository.saveAll(existingPrimaries);
+            productImageRepository.clearPrimaryImages(productId);
         }
 
+        // Store file BEFORE persisting to DB.
+        // Register a compensation callback: if the transaction rolls back after
+        // store() succeeds, the file on disk is deleted so nothing is orphaned.
         String url = fileStorageService.store(file);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status == TransactionSynchronization.STATUS_ROLLED_BACK) {
+                    fileStorageService.delete(url);
+                }
+            }
+        });
+
         ProductImage image = new ProductImage();
         image.setProduct(product);
         image.setImageUrl(url);
