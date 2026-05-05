@@ -1,11 +1,14 @@
 package com.fooddrinks.service.impl;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
 import java.util.UUID;
+import javax.imageio.ImageIO;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -63,8 +66,7 @@ public class FileStorageServiceImpl implements FileStorageService {
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("File must not be empty");
         }
-        // Lấy extension từ MIME type (không dùng tên file gốc từ client vì có thể chứa
-        // path traversal)
+        // Extension từ MIME type — không tin client-supplied filename
         String extension = MIME_TO_EXTENSION.get(file.getContentType());
         if (extension == null) {
             throw new BadRequestException("Only JPEG, PNG and WebP images are allowed");
@@ -73,21 +75,37 @@ public class FileStorageServiceImpl implements FileStorageService {
             throw new BadRequestException("File size must not exceed 5MB");
         }
 
-        // Đặt tên file ngẫu nhiên bằng UUID để tránh trùng tên và ẩn tên gốc
-        // Extension lấy từ MIME type đã validate — an toàn, không phụ thuộc client
-        String filename = UUID.randomUUID() + extension;
+        // Đọc toàn bộ bytes 1 lần — dùng cho cả validation lẫn ghi disk
+        byte[] bytes;
+        try {
+            bytes = file.getBytes();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read file", e);
+        }
 
-        // resolve(): ghép uploadPath + filename thành đường dẫn đầy đủ
+        // Validate actual image bytes bằng ImageIO — phòng MIME spoofing:
+        // client có thể gửi Content-Type: image/jpeg nhưng bytes thực là script/binary.
+        // ImageIO.read() trả null nếu bytes không decode được thành ảnh hợp lệ.
+        try (ByteArrayInputStream bais = new ByteArrayInputStream(bytes)) {
+            BufferedImage img = ImageIO.read(bais);
+            if (img == null) {
+                throw new BadRequestException("File content is not a valid image");
+            }
+        } catch (BadRequestException e) {
+            throw e;
+        } catch (IOException e) {
+            throw new BadRequestException("File content is not a valid image");
+        }
+
+        String filename = UUID.randomUUID() + extension;
         Path targetPath = uploadPath.resolve(filename).normalize();
 
-        // Kiểm tra path traversal: đảm bảo targetPath nằm trong uploadPath
         if (!targetPath.startsWith(uploadPath)) {
             throw new BadRequestException("Invalid file path");
         }
 
         try {
-            // Đọc dữ liệu từ file upload và ghi vào targetPath trên disk
-            Files.copy(file.getInputStream(), targetPath);
+            Files.write(targetPath, bytes);
         } catch (IOException e) {
             throw new RuntimeException("Failed to store file", e);
         }
