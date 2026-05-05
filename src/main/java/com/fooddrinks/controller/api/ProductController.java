@@ -24,7 +24,8 @@ public class ProductController {
 
     private final ProductService productService;
 
-    // GET /api/products?letter=A&type=FOOD&categoryId=1&minPrice=10&maxPrice=100&minRating=4&page=0&size=10&sort=name,asc
+    // GET
+    // /api/products?letter=A&type=FOOD&categoryId=1&minPrice=10&maxPrice=100&minRating=4&page=0&size=10&sort=name,asc
     @GetMapping
     public ResponseEntity<ApiResponse<Page<ProductResponse>>> getAll(
             @RequestParam(required = false) String letter,
@@ -48,12 +49,12 @@ public class ProductController {
     @PostMapping
     public ResponseEntity<ApiResponse<ProductResponse>> create(@Valid @RequestBody ProductRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Product created", productService.create(request)));
+                .body(ApiResponse.success(201, "Product created", productService.create(request)));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<ProductResponse>> update(@PathVariable Long id,
-                                                                @Valid @RequestBody ProductRequest request) {
+            @Valid @RequestBody ProductRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Product updated", productService.update(id, request)));
     }
 
@@ -69,12 +70,12 @@ public class ProductController {
             @RequestParam("file") MultipartFile file,
             @RequestParam(defaultValue = "false") boolean isPrimary) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Image uploaded", productService.addImage(id, file, isPrimary)));
+                .body(ApiResponse.success(201, "Image uploaded", productService.addImage(id, file, isPrimary)));
     }
 
     @DeleteMapping("/{id}/images/{imageId}")
     public ResponseEntity<ApiResponse<Void>> deleteImage(@PathVariable Long id,
-                                                          @PathVariable Long imageId) {
+            @PathVariable Long imageId) {
         productService.deleteImage(id, imageId);
         return ResponseEntity.ok(ApiResponse.success("Image deleted", null));
     }

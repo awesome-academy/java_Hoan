@@ -37,11 +37,14 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public Page<ProductResponse> getAll(String letter, ProductType type, Long categoryId,
-                                        BigDecimal minPrice, BigDecimal maxPrice,
-                                        BigDecimal minRating, Pageable pageable) {
+            BigDecimal minPrice, BigDecimal maxPrice,
+            BigDecimal minRating, Pageable pageable) {
         Specification<Product> spec = ProductSpecification.isActive();
 
         if (letter != null && !letter.isBlank()) {
+            if (!letter.matches("[A-Za-z]")) {
+                throw new BadRequestException("letter must be a single A\u2013Z character");
+            }
             spec = spec.and(ProductSpecification.nameStartsWith(letter));
         }
         if (type != null) {
@@ -51,6 +54,9 @@ public class ProductServiceImpl implements ProductService {
             spec = spec.and(ProductSpecification.hasCategory(categoryId));
         }
         if (minPrice != null && maxPrice != null) {
+            if (minPrice.compareTo(maxPrice) > 0) {
+                throw new BadRequestException("minPrice must be less than or equal to maxPrice");
+            }
             spec = spec.and(ProductSpecification.priceBetween(minPrice, maxPrice));
         } else if (minPrice != null) {
             spec = spec.and(ProductSpecification.minPrice(minPrice));
@@ -98,13 +104,12 @@ public class ProductServiceImpl implements ProductService {
     public ProductResponse addImage(Long productId, MultipartFile file, boolean isPrimary) {
         Product product = findActiveOrThrow(productId);
 
-        // If this image is primary, unset any existing primary image
+        // Unset ALL existing primary images for this product to guarantee only one
+        // isPrimary=true
         if (isPrimary) {
-            productImageRepository.findByProductIdAndIsPrimaryTrue(productId)
-                    .ifPresent(existing -> {
-                        existing.setIsPrimary(false);
-                        productImageRepository.save(existing);
-                    });
+            List<ProductImage> existingPrimaries = productImageRepository.findAllByProductIdAndIsPrimaryTrue(productId);
+            existingPrimaries.forEach(existing -> existing.setIsPrimary(false));
+            productImageRepository.saveAll(existingPrimaries);
         }
 
         String url = fileStorageService.store(file);
@@ -114,7 +119,7 @@ public class ProductServiceImpl implements ProductService {
         image.setIsPrimary(isPrimary);
         productImageRepository.save(image);
 
-        return toResponse(productRepository.findById(productId).orElseThrow());
+        return toResponse(findActiveOrThrow(productId));
     }
 
     @Override

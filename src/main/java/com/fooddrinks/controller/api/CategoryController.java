@@ -32,7 +32,7 @@ public class CategoryController {
     @PostMapping
     public ResponseEntity<ApiResponse<CategoryResponse>> create(@Valid @RequestBody CategoryRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Category created", categoryService.create(request)));
+                .body(ApiResponse.success(201, "Category created", categoryService.create(request)));
     }
 
     @PutMapping("/{id}")

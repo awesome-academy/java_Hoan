@@ -6,6 +6,7 @@ import com.fooddrinks.entity.Category;
 import com.fooddrinks.exception.ConflictException;
 import com.fooddrinks.exception.ResourceNotFoundException;
 import com.fooddrinks.repository.CategoryRepository;
+import com.fooddrinks.repository.ProductRepository;
 import com.fooddrinks.service.CategoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,7 @@ import java.util.List;
 public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
+    private final ProductRepository productRepository;
 
     @Override
     public List<CategoryResponse> getAll() {
@@ -61,6 +63,9 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional
     public void delete(Long id) {
         findOrThrow(id);
+        if (productRepository.existsByCategoryId(id)) {
+            throw new ConflictException("Cannot delete category: products are still assigned to it");
+        }
         categoryRepository.deleteById(id);
     }
 
