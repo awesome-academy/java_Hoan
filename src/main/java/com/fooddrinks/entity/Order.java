@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.BatchSize;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -34,6 +35,9 @@ public class Order extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String note;
 
+    // @BatchSize: when getHistory() accesses items.size() for N orders,
+    // Hibernate loads all collections in batches of 20 (instead of N queries).
+    @BatchSize(size = 20)
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items = new ArrayList<>();
 }

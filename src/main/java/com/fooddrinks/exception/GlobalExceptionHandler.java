@@ -40,10 +40,33 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(401, ex.getMessage()));
     }
 
+    // Handles DB unique constraint violations — parses MySQL root cause to return a
+    // specific message
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiResponse<?>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        String msg = ex.getMostSpecificCause().getMessage();
+        String friendlyMessage = resolveIntegrityMessage(msg);
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(ApiResponse.error(409, "Email already in use"));
+                .body(ApiResponse.error(409, friendlyMessage));
+    }
+
+    private String resolveIntegrityMessage(String causeMessage) {
+        if (causeMessage == null)
+            return "Duplicate entry — the resource already exists";
+        String lower = causeMessage.toLowerCase();
+        if (lower.contains("users") && lower.contains("email")) {
+            return "Email already in use — please use a different email";
+        }
+        if (lower.contains("cart_items") || (lower.contains("cart") && lower.contains("product"))) {
+            return "This product is already in your cart — use the update endpoint to change quantity";
+        }
+        if (lower.contains("categories") && lower.contains("name")) {
+            return "Category name already exists — please use a different name";
+        }
+        if (lower.contains("ratings") || (lower.contains("user") && lower.contains("product"))) {
+            return "You have already rated this product";
+        }
+        return "Duplicate entry — the resource already exists";
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
