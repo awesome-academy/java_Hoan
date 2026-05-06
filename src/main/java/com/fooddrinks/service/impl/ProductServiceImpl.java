@@ -38,6 +38,7 @@ public class ProductServiceImpl implements ProductService {
     private final FileStorageService fileStorageService;
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ProductResponse> getAll(String letter, ProductType type, Long categoryId,
             BigDecimal minPrice, BigDecimal maxPrice,
             BigDecimal minRating, Pageable pageable) {
@@ -73,6 +74,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ProductResponse getById(Long id) {
         return toResponse(findActiveOrThrow(id));
     }
@@ -104,10 +106,15 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponse addImage(Long productId, MultipartFile file, boolean isPrimary) {
-        Product product = findActiveOrThrow(productId);
+        // When setting a new primary, acquire a pessimistic write lock (SELECT FOR
+        // UPDATE)
+        // on the product row. This serializes concurrent isPrimary=true uploads for the
+        // same product — only one transaction can hold the lock at a time, so the
+        // clearPrimaryImages + insert sequence is effectively atomic across requests.
+        Product product = isPrimary
+                ? findActiveWithLockOrThrow(productId)
+                : findActiveOrThrow(productId);
 
-        // Single atomic UPDATE — safe under concurrent isPrimary=true uploads.
-        // Replaces the old findAll+saveAll pattern which had a race window.
         if (isPrimary) {
             productImageRepository.clearPrimaryImages(productId);
         }
@@ -142,8 +149,18 @@ public class ProductServiceImpl implements ProductService {
         if (!image.getProduct().getId().equals(productId)) {
             throw new BadRequestException("Image does not belong to product " + productId);
         }
-        fileStorageService.delete(image.getImageUrl());
+        // Delete DB record first — if the TX rolls back, the file on disk is still
+        // intact.
+        // Delete the file only after the commit is confirmed (afterCommit) so we never
+        // end up with a DB record pointing to a missing file.
+        String imageUrl = image.getImageUrl();
         productImageRepository.delete(image);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                fileStorageService.delete(imageUrl);
+            }
+        });
     }
 
     // --- helpers ---
@@ -171,6 +188,11 @@ public class ProductServiceImpl implements ProductService {
             throw new ResourceNotFoundException("Product", id);
         }
         return product;
+    }
+
+    private Product findActiveWithLockOrThrow(Long id) {
+        return productRepository.findActiveByIdWithLock(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", id));
     }
 
     private ProductResponse toResponse(Product product) {
