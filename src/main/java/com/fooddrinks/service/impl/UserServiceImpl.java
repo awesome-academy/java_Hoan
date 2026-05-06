@@ -42,7 +42,7 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + email));
     }
 
-    public UserResponse toResponse(User user) {
+    private UserResponse toResponse(User user) {
         return UserResponse.builder()
                 .id(user.getId())
                 .email(user.getEmail())

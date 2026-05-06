@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.Optional;
 
 /**
  * Utility for generating and validating JWT tokens using jjwt 0.12.x API.
@@ -45,18 +46,15 @@ public class JwtUtil {
                 .compact();
     }
 
-    /** Extract the email (subject) from a valid token. */
-    public String extractEmail(String token) {
-        return parseClaims(token).getSubject();
-    }
-
-    /** Returns true if the token is well-formed, signed correctly, and not expired. */
-    public boolean isValid(String token) {
+    /**
+     * Validates the token and returns the email subject in one parse.
+     * Returns empty if the token is invalid, expired, or tampered.
+     */
+    public Optional<String> tryExtractEmail(String token) {
         try {
-            parseClaims(token);
-            return true;
+            return Optional.of(parseClaims(token).getSubject());
         } catch (JwtException | IllegalArgumentException e) {
-            return false;
+            return Optional.empty();
         }
     }
 

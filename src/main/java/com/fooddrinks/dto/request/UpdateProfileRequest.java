@@ -10,7 +10,7 @@ import lombok.Setter;
 @NoArgsConstructor
 public class UpdateProfileRequest {
 
-    @Size(min = 1, max = 255, message = "Full name must not exceed 255 characters")
+    @Size(max = 255, message = "Full name must not exceed 255 characters")
     private String fullName;
 
     @Size(max = 10, message = "Phone must not exceed 10 characters")
