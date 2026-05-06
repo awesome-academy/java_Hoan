@@ -28,8 +28,7 @@ public class FileStorageServiceImpl implements FileStorageService {
     // (không tin client-supplied filename)
     private static final Map<String, String> MIME_TO_EXTENSION = Map.of(
             "image/jpeg", ".jpg",
-            "image/png", ".png",
-            "image/webp", ".webp");
+            "image/png", ".png");
     private static final long MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
     // Đọc giá trị app.upload.dir từ application.yml (hiện tại là "uploads/")
@@ -69,7 +68,7 @@ public class FileStorageServiceImpl implements FileStorageService {
         // Extension từ MIME type — không tin client-supplied filename
         String extension = MIME_TO_EXTENSION.get(file.getContentType());
         if (extension == null) {
-            throw new BadRequestException("Only JPEG, PNG and WebP images are allowed");
+            throw new BadRequestException("Only JPEG and PNG images are allowed");
         }
         if (file.getSize() > MAX_SIZE_BYTES) {
             throw new BadRequestException("File size must not exceed 5MB");
