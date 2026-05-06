@@ -106,22 +106,15 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponse addImage(Long productId, MultipartFile file, boolean isPrimary) {
-        // When setting a new primary, acquire a pessimistic write lock (SELECT FOR
-        // UPDATE)
-        // on the product row. This serializes concurrent isPrimary=true uploads for the
-        // same product — only one transaction can hold the lock at a time, so the
-        // clearPrimaryImages + insert sequence is effectively atomic across requests.
-        Product product = isPrimary
-                ? findActiveWithLockOrThrow(productId)
-                : findActiveOrThrow(productId);
-
-        if (isPrimary) {
-            productImageRepository.clearPrimaryImages(productId);
+        // Validate product exists (without lock) before slow IO.
+        if (!isPrimary) {
+            findActiveOrThrow(productId);
         }
 
-        // Store file BEFORE persisting to DB.
-        // Register a compensation callback: if the transaction rolls back after
-        // store() succeeds, the file on disk is deleted so nothing is orphaned.
+        // Store and validate file FIRST — before acquiring any DB lock.
+        // This keeps the lock window as short as possible.
+        // Register a rollback compensation: if the TX rolls back after store() succeeds,
+        // the file on disk is deleted so nothing is orphaned.
         String url = fileStorageService.store(file);
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
@@ -131,6 +124,17 @@ public class ProductServiceImpl implements ProductService {
                 }
             }
         });
+
+        // For isPrimary=true, acquire PESSIMISTIC_WRITE lock only now (after IO is done).
+        // This serializes concurrent isPrimary=true uploads: only one TX holds the lock
+        // at a time, making clearPrimaryImages + insert effectively atomic.
+        Product product = isPrimary
+                ? findActiveWithLockOrThrow(productId)
+                : findActiveOrThrow(productId);
+
+        if (isPrimary) {
+            productImageRepository.clearPrimaryImages(productId);
+        }
 
         ProductImage image = new ProductImage();
         image.setProduct(product);
