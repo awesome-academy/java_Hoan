@@ -40,9 +40,11 @@ public class OrderServiceImpl implements OrderService {
     public OrderResponse placeOrder(String email, PlaceOrderRequest request) {
         User user = findUserOrThrow(email);
 
-        // Load cart with items only (products are loaded on demand to avoid locking them
-        // before we're ready — each product will be locked individually below)
-        Cart cart = cartRepository.findByUserId(user.getId())
+        // Lock the cart row (PESSIMISTIC_WRITE / SELECT FOR UPDATE) before reading its items.
+        // This prevents two concurrent requests from the same user (e.g. double-click
+        // "Place Order") from both reading the same cart, decrementing stock twice,
+        // and creating duplicate orders before either transaction clears the cart.
+        Cart cart = cartRepository.findByUserIdWithLock(user.getId())
                 .orElseThrow(() -> new BadRequestException("Your cart is empty"));
 
         List<CartItem> items = cart.getItems();
@@ -112,10 +114,9 @@ public class OrderServiceImpl implements OrderService {
     @Transactional(readOnly = true)
     public List<OrderSummaryResponse> getHistory(String email) {
         User user = findUserOrThrow(email);
-        return orderRepository.findByUserIdOrderByCreatedAtDesc(user.getId())
-                .stream()
-                .map(this::toOrderSummaryResponse)
-                .toList();
+        // findSummaryByUserId uses COUNT(i) in the DB — avoids loading items collection
+        // just to call size(), keeping the history endpoint truly lightweight.
+        return orderRepository.findSummaryByUserId(user.getId());
     }
 
     @Override
@@ -139,19 +140,6 @@ public class OrderServiceImpl implements OrderService {
     private User findUserOrThrow(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + email));
-    }
-
-    private OrderSummaryResponse toOrderSummaryResponse(Order order) {
-        return OrderSummaryResponse.builder()
-                .id(order.getId())
-                .status(order.getStatus())
-                .totalAmount(order.getTotalAmount())
-                .shippingAddress(order.getShippingAddress())
-                .note(order.getNote())
-                .itemCount(order.getItems().size())
-                .createdAt(order.getCreatedAt())
-                .updatedAt(order.getUpdatedAt())
-                .build();
     }
 
     private OrderResponse toOrderResponse(Order order) {

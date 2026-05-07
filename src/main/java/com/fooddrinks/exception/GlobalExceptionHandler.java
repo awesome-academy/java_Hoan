@@ -40,19 +40,23 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(401, ex.getMessage()));
     }
 
-    // Handles DB unique constraint violations — parses MySQL root cause to return a
-    // specific message
+    // Handles DB constraint violations.
+    // Only unique constraint violations (MySQL "Duplicate entry") → 409.
+    // FK, NOT NULL, or check constraint failures are bugs (not client errors) →
+    // 500.
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiResponse<?>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
         String msg = ex.getMostSpecificCause().getMessage();
-        String friendlyMessage = resolveIntegrityMessage(msg);
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(ApiResponse.error(409, friendlyMessage));
+        if (msg != null && msg.toLowerCase().contains("duplicate entry")) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(ApiResponse.error(409, resolveUniqueConstraintMessage(msg)));
+        }
+        // FK violations, NOT NULL, CHECK constraints — not a client error
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error(500, "Internal server error"));
     }
 
-    private String resolveIntegrityMessage(String causeMessage) {
-        if (causeMessage == null)
-            return "Duplicate entry — the resource already exists";
+    private String resolveUniqueConstraintMessage(String causeMessage) {
         String lower = causeMessage.toLowerCase();
         if (lower.contains("users") && lower.contains("email")) {
             return "Email already in use — please use a different email";
