@@ -40,10 +40,37 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(401, ex.getMessage()));
     }
 
+    // Handles DB constraint violations.
+    // Only unique constraint violations (MySQL "Duplicate entry") → 409.
+    // FK, NOT NULL, or check constraint failures are bugs (not client errors) →
+    // 500.
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiResponse<?>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(ApiResponse.error(409, "Email already in use"));
+        String msg = ex.getMostSpecificCause().getMessage();
+        if (msg != null && msg.toLowerCase().contains("duplicate entry")) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(ApiResponse.error(409, resolveUniqueConstraintMessage(msg)));
+        }
+        // FK violations, NOT NULL, CHECK constraints — not a client error
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error(500, "Internal server error"));
+    }
+
+    private String resolveUniqueConstraintMessage(String causeMessage) {
+        String lower = causeMessage.toLowerCase();
+        if (lower.contains("users") && lower.contains("email")) {
+            return "Email already in use — please use a different email";
+        }
+        if (lower.contains("cart_items") || (lower.contains("cart") && lower.contains("product"))) {
+            return "This product is already in your cart — use the update endpoint to change quantity";
+        }
+        if (lower.contains("categories") && lower.contains("name")) {
+            return "Category name already exists — please use a different name";
+        }
+        if (lower.contains("ratings") || (lower.contains("user") && lower.contains("product"))) {
+            return "You have already rated this product";
+        }
+        return "Duplicate entry — the resource already exists";
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
