@@ -80,7 +80,7 @@ public class SummaryServiceImpl implements SummaryService {
 
     private CartItemResponse toCartItemResponse(CartItem item) {
         String primaryImageUrl = item.getProduct().getImages().stream()
-                .filter(ProductImage::getIsPrimary)
+                .filter(img -> Boolean.TRUE.equals(img.getIsPrimary()))
                 .findFirst()
                 .map(ProductImage::getImageUrl)
                 .orElse(null);
