@@ -57,10 +57,14 @@ spring:
 app:
   jwt:
     secret: YOUR_JWT_SECRET_KEY_MUST_BE_AT_LEAST_32_CHARACTERS_LONG
-    expiration-ms: 86400000  # 24 hours
+    expiration-ms: 86400000 # 24 hours
   upload:
     dir: uploads/
   slack:
     webhook-url: YOUR_SLACK_WEBHOOK_URL
   admin:
+    # Set create=true to bootstrap the admin account on startup.
+    # Override email/password via env vars (APP_ADMIN_EMAIL / APP_ADMIN_PASSWORD) in production.
+    create: true
     email: admin@foodsdrinks.com
+    password: Admin@123456

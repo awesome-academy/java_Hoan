@@ -1,5 +1,18 @@
 package com.fooddrinks.service.impl;
 
+import java.math.BigDecimal;
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.web.multipart.MultipartFile;
+
 import com.fooddrinks.dto.request.ProductRequest;
 import com.fooddrinks.dto.response.ProductImageResponse;
 import com.fooddrinks.dto.response.ProductResponse;
@@ -15,18 +28,8 @@ import com.fooddrinks.repository.ProductRepository;
 import com.fooddrinks.repository.spec.ProductSpecification;
 import com.fooddrinks.service.FileStorageService;
 import com.fooddrinks.service.ProductService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.math.BigDecimal;
-import java.util.List;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -113,7 +116,8 @@ public class ProductServiceImpl implements ProductService {
 
         // Store and validate file FIRST — before acquiring any DB lock.
         // This keeps the lock window as short as possible.
-        // Register a rollback compensation: if the TX rolls back after store() succeeds,
+        // Register a rollback compensation: if the TX rolls back after store()
+        // succeeds,
         // the file on disk is deleted so nothing is orphaned.
         String url = fileStorageService.store(file);
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
@@ -125,7 +129,8 @@ public class ProductServiceImpl implements ProductService {
             }
         });
 
-        // For isPrimary=true, acquire PESSIMISTIC_WRITE lock only now (after IO is done).
+        // For isPrimary=true, acquire PESSIMISTIC_WRITE lock only now (after IO is
+        // done).
         // This serializes concurrent isPrimary=true uploads: only one TX holds the lock
         // at a time, making clearPrimaryImages + insert effectively atomic.
         Product product = isPrimary
@@ -203,12 +208,14 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
+    @PreAuthorize("hasRole('ADMIN')")
     public Page<ProductResponse> getAllForAdmin(Pageable pageable) {
         return productRepository.findAll(pageable).map(this::toResponse);
     }
 
     @Override
     @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
     public ProductResponse updateForAdmin(Long id, ProductRequest request) {
         // No isActive check — admin can edit inactive products
         Product product = productRepository.findById(id)
@@ -219,6 +226,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
     public ProductResponse restoreProduct(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", id));
@@ -228,6 +236,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
+    @PreAuthorize("hasRole('ADMIN')")
     public ProductResponse getByIdForAdmin(Long id) {
         return toResponse(productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", id)));

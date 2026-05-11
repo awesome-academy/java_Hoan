@@ -1,17 +1,21 @@
 package com.fooddrinks.service.impl;
 
-import com.fooddrinks.dto.request.UpdateProfileRequest;
-import com.fooddrinks.dto.response.UserResponse;
-import com.fooddrinks.entity.User;
-import com.fooddrinks.exception.ResourceNotFoundException;
-import com.fooddrinks.repository.UserRepository;
-import com.fooddrinks.service.UserService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.fooddrinks.dto.request.UpdateProfileRequest;
+import com.fooddrinks.dto.response.UserResponse;
+import com.fooddrinks.entity.Role;
+import com.fooddrinks.entity.User;
+import com.fooddrinks.exception.BadRequestException;
+import com.fooddrinks.exception.ResourceNotFoundException;
+import com.fooddrinks.repository.UserRepository;
+import com.fooddrinks.service.UserService;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -63,6 +67,10 @@ public class UserServiceImpl implements UserService {
     public UserResponse toggleActive(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", id));
+        // Prevent deactivating any ADMIN account to avoid irreversible admin lockout.
+        if (Role.ADMIN.equals(user.getRole()) && Boolean.TRUE.equals(user.getIsActive())) {
+            throw new BadRequestException("Cannot deactivate an ADMIN account.");
+        }
         user.setIsActive(!user.getIsActive());
         return toResponse(userRepository.save(user));
     }
@@ -91,4 +99,3 @@ public class UserServiceImpl implements UserService {
                 .build();
     }
 }
-
