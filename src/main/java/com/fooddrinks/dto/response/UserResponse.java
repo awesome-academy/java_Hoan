@@ -24,6 +24,8 @@ public class UserResponse {
     private Role role;
     private Provider provider;
     private Boolean emailVerified;
+    private Boolean isActive;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
+

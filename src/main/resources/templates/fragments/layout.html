@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/springsecurity6">
+<body>
+
+<!-- ===== NAVBAR FRAGMENT ===== -->
+<nav th:fragment="navbar" class="navbar navbar-dark bg-dark px-3">
+  <a class="navbar-brand fw-bold" th:href="@{/admin/users}">🍔 Admin Panel</a>
+  <div class="ms-auto d-flex align-items-center gap-3">
+    <span class="text-light small" sec:authentication="name">admin</span>
+    <form th:action="@{/admin/logout}" method="post" class="m-0">
+      <button type="submit" class="btn btn-outline-light btn-sm">Logout</button>
+    </form>
+  </div>
+</nav>
+
+<!-- ===== SIDEBAR FRAGMENT ===== -->
+<div th:fragment="sidebar" class="col-md-2 bg-light border-end min-vh-100 pt-3">
+  <ul class="nav flex-column">
+    <li class="nav-item">
+      <a class="nav-link fw-semibold text-secondary text-uppercase small px-3 pb-1">Menu</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" th:href="@{/admin/users}"
+         th:classappend="${currentUri != null and currentUri.startsWith('/admin/users')} ? 'active fw-bold' : ''">
+        👤 Users
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" th:href="@{/admin/categories}"
+         th:classappend="${currentUri != null and currentUri.startsWith('/admin/categories')} ? 'active fw-bold' : ''">
+        📂 Categories
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" th:href="@{/admin/products}"
+         th:classappend="${currentUri != null and currentUri.startsWith('/admin/products')} ? 'active fw-bold' : ''">
+        🛍️ Products
+      </a>
+    </li>
+  </ul>
+</div>
+
+<!-- ===== FLASH ALERTS FRAGMENT ===== -->
+<div th:fragment="alerts">
+  <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+    <span th:text="${successMessage}"></span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+    <span th:text="${errorMessage}"></span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+</div>
+
+<!-- ===== PAGINATION FRAGMENT ===== -->
+<!-- Usage: th:replace="~{fragments/layout :: pagination(page, '/admin/path')}" -->
+<nav th:fragment="pagination(page, basePath)" aria-label="Page navigation" th:if="${page.totalPages > 1}">
+  <ul class="pagination pagination-sm mb-0">
+    <li class="page-item" th:classappend="${page.first} ? 'disabled'">
+      <a class="page-link" th:href="${basePath + '?page=' + (page.number - 1)}">«</a>
+    </li>
+    <li class="page-item" th:each="i : ${#numbers.sequence(0, page.totalPages - 1)}"
+        th:classappend="${i == page.number} ? 'active'">
+      <a class="page-link" th:href="${basePath + '?page=' + i}" th:text="${i + 1}">1</a>
+    </li>
+    <li class="page-item" th:classappend="${page.last} ? 'disabled'">
+      <a class="page-link" th:href="${basePath + '?page=' + (page.number + 1)}">»</a>
+    </li>
+  </ul>
+</nav>
+
+</body>
+</html>

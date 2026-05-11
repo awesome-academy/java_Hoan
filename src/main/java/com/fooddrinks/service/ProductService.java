@@ -26,4 +26,19 @@ public interface ProductService {
     ProductResponse addImage(Long productId, MultipartFile file, boolean isPrimary);
 
     void deleteImage(Long productId, Long imageId);
+
+    // --- Admin methods ---
+
+    /** List ALL products (including inactive) for admin management. */
+    Page<ProductResponse> getAllForAdmin(Pageable pageable);
+
+    /** Admin update — works on both active and inactive products. */
+    ProductResponse updateForAdmin(Long id, ProductRequest request);
+
+    /** Restore a soft-deleted product (set isActive = true). */
+    ProductResponse restoreProduct(Long id);
+
+    /** Get any product by id regardless of isActive flag (for admin edit). */
+    ProductResponse getByIdForAdmin(Long id);
 }
+

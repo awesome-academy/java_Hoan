@@ -199,6 +199,40 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Product", id));
     }
 
+    // --- Admin methods ---
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProductResponse> getAllForAdmin(Pageable pageable) {
+        return productRepository.findAll(pageable).map(this::toResponse);
+    }
+
+    @Override
+    @Transactional
+    public ProductResponse updateForAdmin(Long id, ProductRequest request) {
+        // No isActive check — admin can edit inactive products
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", id));
+        applyRequest(product, request);
+        return toResponse(productRepository.save(product));
+    }
+
+    @Override
+    @Transactional
+    public ProductResponse restoreProduct(Long id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", id));
+        product.setIsActive(true);
+        return toResponse(productRepository.save(product));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProductResponse getByIdForAdmin(Long id) {
+        return toResponse(productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", id)));
+    }
+
     private ProductResponse toResponse(Product product) {
         List<ProductImageResponse> imageResponses = product.getImages().stream()
                 .map(img -> ProductImageResponse.builder()
