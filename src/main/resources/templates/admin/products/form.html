@@ -48,7 +48,7 @@
                 <div class="row mb-3">
                   <div class="col">
                     <label class="form-label">Price (VND) <span class="text-danger">*</span></label>
-                    <input type="number" th:field="*{price}" class="form-control" step="1000" min="1"
+                    <input type="number" th:field="*{price}" class="form-control" step="1000" min="1000"
                            th:classappend="${#fields.hasErrors('price')} ? 'is-invalid'" required>
                     <div class="invalid-feedback" th:errors="*{price}"></div>
                   </div>

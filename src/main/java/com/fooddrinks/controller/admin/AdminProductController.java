@@ -57,9 +57,9 @@ public class AdminProductController {
 
     @PostMapping
     public String create(@Valid @ModelAttribute("product") ProductRequest request,
-                          BindingResult bindingResult,
-                          Model model,
-                          RedirectAttributes redirectAttributes) {
+            BindingResult bindingResult,
+            Model model,
+            RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
             model.addAttribute("categories", categoryService.getAll());
             model.addAttribute("productTypes", ProductType.values());
@@ -68,9 +68,9 @@ public class AdminProductController {
             return "admin/products/form";
         }
         try {
-            ProductResponse created = productService.create(request);
+            productService.create(request);
             redirectAttributes.addFlashAttribute("successMessage", "Product created successfully.");
-            return "redirect:/admin/products/" + created.getId() + "/edit";
+            return "redirect:/admin/products";
         } catch (ResourceNotFoundException e) {
             model.addAttribute("errorMessage", e.getMessage());
             model.addAttribute("categories", categoryService.getAll());
@@ -83,7 +83,7 @@ public class AdminProductController {
 
     @GetMapping("/{id}/edit")
     public String editForm(@PathVariable Long id, Model model,
-                            RedirectAttributes redirectAttributes) {
+            RedirectAttributes redirectAttributes) {
         try {
             ProductResponse existing = productService.getByIdForAdmin(id);
             ProductRequest form = new ProductRequest();
@@ -109,14 +109,15 @@ public class AdminProductController {
 
     @PostMapping("/{id}")
     public String update(@PathVariable Long id,
-                          @Valid @ModelAttribute("product") ProductRequest request,
-                          BindingResult bindingResult,
-                          Model model,
-                          RedirectAttributes redirectAttributes) {
+            @Valid @ModelAttribute("product") ProductRequest request,
+            BindingResult bindingResult,
+            Model model,
+            RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
             try {
                 model.addAttribute("productDetail", productService.getByIdForAdmin(id));
-            } catch (ResourceNotFoundException ignored) { }
+            } catch (ResourceNotFoundException ignored) {
+            }
             model.addAttribute("categories", categoryService.getAll());
             model.addAttribute("productTypes", ProductType.values());
             model.addAttribute("productId", id);
@@ -161,9 +162,9 @@ public class AdminProductController {
      */
     @PostMapping("/{id}/images")
     public String uploadImage(@PathVariable Long id,
-                               @RequestParam("file") MultipartFile file,
-                               @RequestParam(defaultValue = "false") boolean primary,
-                               RedirectAttributes redirectAttributes) {
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(defaultValue = "false") boolean primary,
+            RedirectAttributes redirectAttributes) {
         try {
             productService.addImage(id, file, primary);
             redirectAttributes.addFlashAttribute("successMessage", "Image uploaded successfully.");
@@ -175,8 +176,8 @@ public class AdminProductController {
 
     @PostMapping("/{id}/images/{imageId}/delete")
     public String deleteImage(@PathVariable Long id,
-                               @PathVariable Long imageId,
-                               RedirectAttributes redirectAttributes) {
+            @PathVariable Long imageId,
+            RedirectAttributes redirectAttributes) {
         try {
             productService.deleteImage(id, imageId);
             redirectAttributes.addFlashAttribute("successMessage", "Image deleted.");
