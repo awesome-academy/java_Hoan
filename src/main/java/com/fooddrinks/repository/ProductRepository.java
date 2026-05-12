@@ -31,6 +31,8 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     boolean existsByCategoryId(Long categoryId);
 
+    long countByIsActive(Boolean isActive);
+
     // Acquires a PESSIMISTIC_WRITE (SELECT ... FOR UPDATE) lock on the product row.
     // Used in addImage() when isPrimary=true to serialize concurrent primary-image
     // uploads.

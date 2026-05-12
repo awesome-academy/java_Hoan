@@ -1,8 +1,13 @@
 package com.fooddrinks.service;
 
 import com.fooddrinks.dto.request.PlaceOrderRequest;
+import com.fooddrinks.dto.response.AdminOrderDetailResponse;
+import com.fooddrinks.dto.response.AdminOrderSummaryResponse;
 import com.fooddrinks.dto.response.OrderResponse;
 import com.fooddrinks.dto.response.OrderSummaryResponse;
+import com.fooddrinks.entity.OrderStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -23,4 +28,20 @@ public interface OrderService {
      * Throws ResourceNotFoundException if the order doesn't belong to this user.
      */
     OrderResponse getById(String email, Long orderId);
+
+    // --- Admin methods ---
+
+    /** List all orders (any status) with user info, newest first. */
+    Page<AdminOrderSummaryResponse> getAllOrdersForAdmin(Pageable pageable);
+
+    /** Get full order detail (items + user info) regardless of status. */
+    AdminOrderDetailResponse getOrderByIdForAdmin(Long orderId);
+
+    /**
+     * Update the status of an order.
+     * Terminal states (COMPLETED, CANCELLED) cannot be changed.
+     * Throws BadRequestException for invalid transitions.
+     */
+    AdminOrderDetailResponse updateOrderStatus(Long orderId, OrderStatus newStatus);
 }
+

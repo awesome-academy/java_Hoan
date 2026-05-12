@@ -13,10 +13,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class AdminLoginController {
 
-    /** Redirect root /admin to /admin/users */
+    /** Redirect root /admin to /admin/dashboard */
     @GetMapping("/admin")
     public String adminRoot() {
-        return "redirect:/admin/users";
+        return "redirect:/admin/dashboard";
     }
 
     @GetMapping("/admin/login")

@@ -5,7 +5,7 @@
 
 <!-- ===== NAVBAR FRAGMENT ===== -->
 <nav th:fragment="navbar" class="navbar navbar-dark bg-dark px-3">
-  <a class="navbar-brand fw-bold" th:href="@{/admin/users}">🍔 Admin Panel</a>
+  <a class="navbar-brand fw-bold" th:href="@{/admin/dashboard}">🍔 Admin Panel</a>
   <div class="ms-auto d-flex align-items-center gap-3">
     <span class="text-light small" sec:authentication="name">admin</span>
     <form th:action="@{/admin/logout}" method="post" class="m-0">
@@ -19,6 +19,27 @@
   <ul class="nav flex-column">
     <li class="nav-item">
       <a class="nav-link fw-semibold text-secondary text-uppercase small px-3 pb-1">Menu</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" th:href="@{/admin/dashboard}"
+         th:classappend="${currentUri != null and currentUri.startsWith('/admin/dashboard')} ? 'active fw-bold' : ''">
+        📊 Dashboard
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" th:href="@{/admin/orders}"
+         th:classappend="${currentUri != null and currentUri.startsWith('/admin/orders')} ? 'active fw-bold' : ''">
+        🧾 Orders
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" th:href="@{/admin/suggestions}"
+         th:classappend="${currentUri != null and currentUri.startsWith('/admin/suggestions')} ? 'active fw-bold' : ''">
+        💡 Suggestions
+      </a>
+    </li>
+    <li class="nav-item mt-2">
+      <a class="nav-link fw-semibold text-secondary text-uppercase small px-3 pb-1">Catalog</a>
     </li>
     <li class="nav-item">
       <a class="nav-link" th:href="@{/admin/users}"
