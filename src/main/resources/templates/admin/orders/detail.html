@@ -90,7 +90,7 @@
               <th:block th:unless="${order.status.name() == 'COMPLETED' or order.status.name() == 'CANCELLED'}">
                 <form th:action="@{/admin/orders/{id}/status(id=${order.id})}" method="post" class="d-flex gap-2">
                   <select name="status" class="form-select form-select-sm">
-                    <option th:each="s : ${allStatuses}"
+                    <option th:each="s : ${allowedStatuses}"
                             th:value="${s}"
                             th:text="${s}"
                             th:selected="${s == order.status}">

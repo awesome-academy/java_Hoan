@@ -1,15 +1,17 @@
 package com.fooddrinks.service;
 
+import java.util.List;
+import java.util.Set;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import com.fooddrinks.dto.request.PlaceOrderRequest;
 import com.fooddrinks.dto.response.AdminOrderDetailResponse;
 import com.fooddrinks.dto.response.AdminOrderSummaryResponse;
 import com.fooddrinks.dto.response.OrderResponse;
 import com.fooddrinks.dto.response.OrderSummaryResponse;
 import com.fooddrinks.entity.OrderStatus;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-
-import java.util.List;
 
 public interface OrderService {
 
@@ -20,7 +22,9 @@ public interface OrderService {
      */
     OrderResponse placeOrder(String email, PlaceOrderRequest request);
 
-    /** Returns a lightweight summary list of all orders for the user (newest first). */
+    /**
+     * Returns a lightweight summary list of all orders for the user (newest first).
+     */
     List<OrderSummaryResponse> getHistory(String email);
 
     /**
@@ -34,6 +38,12 @@ public interface OrderService {
     /** List all orders (any status) with user info, newest first. */
     Page<AdminOrderSummaryResponse> getAllOrdersForAdmin(Pageable pageable);
 
+    /**
+     * Returns the set of statuses that can be transitioned to from the given
+     * status.
+     */
+    Set<OrderStatus> getAllowedTransitions(OrderStatus current);
+
     /** Get full order detail (items + user info) regardless of status. */
     AdminOrderDetailResponse getOrderByIdForAdmin(Long orderId);
 
@@ -44,4 +54,3 @@ public interface OrderService {
      */
     AdminOrderDetailResponse updateOrderStatus(Long orderId, OrderStatus newStatus);
 }
-

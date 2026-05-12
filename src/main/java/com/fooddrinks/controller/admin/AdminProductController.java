@@ -1,14 +1,7 @@
 package com.fooddrinks.controller.admin;
 
-import com.fooddrinks.dto.request.ProductRequest;
-import com.fooddrinks.dto.response.ProductResponse;
-import com.fooddrinks.entity.ProductType;
-import com.fooddrinks.exception.BadRequestException;
-import com.fooddrinks.exception.ResourceNotFoundException;
-import com.fooddrinks.service.CategoryService;
-import com.fooddrinks.service.ProductService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -25,8 +18,21 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import com.fooddrinks.dto.request.ProductRequest;
+import com.fooddrinks.dto.response.CategoryResponse;
+import com.fooddrinks.dto.response.ProductResponse;
+import com.fooddrinks.entity.ProductType;
+import com.fooddrinks.exception.BadRequestException;
+import com.fooddrinks.exception.ResourceNotFoundException;
+import com.fooddrinks.service.CategoryService;
+import com.fooddrinks.service.ProductService;
+import com.fooddrinks.util.AdminPaths;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
 @Controller
-@RequestMapping("/admin/products")
+@RequestMapping(AdminPaths.Products.URL)
 @PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
 public class AdminProductController {
@@ -36,23 +42,31 @@ public class AdminProductController {
     private final ProductService productService;
     private final CategoryService categoryService;
 
+    @ModelAttribute("categories")
+    public List<CategoryResponse> populateCategories() {
+        return categoryService.getAll();
+    }
+
+    @ModelAttribute("productTypes")
+    public ProductType[] populateProductTypes() {
+        return ProductType.values();
+    }
+
     @GetMapping
     public String list(@RequestParam(defaultValue = "0") int page, Model model) {
         Page<ProductResponse> products = productService.getAllForAdmin(
                 PageRequest.of(page, PAGE_SIZE, Sort.by("createdAt").descending()));
         model.addAttribute("products", products);
         model.addAttribute("currentPage", page);
-        return "admin/products/list";
+        return AdminPaths.Products.VIEW_LIST;
     }
 
     @GetMapping("/new")
     public String newForm(Model model) {
         model.addAttribute("product", new ProductRequest());
-        model.addAttribute("categories", categoryService.getAll());
-        model.addAttribute("productTypes", ProductType.values());
-        model.addAttribute("formAction", "/admin/products");
+        model.addAttribute("formAction", AdminPaths.Products.URL);
         model.addAttribute("pageTitle", "New Product");
-        return "admin/products/form";
+        return AdminPaths.Products.VIEW_FORM;
     }
 
     @PostMapping
@@ -61,23 +75,19 @@ public class AdminProductController {
             Model model,
             RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
-            model.addAttribute("categories", categoryService.getAll());
-            model.addAttribute("productTypes", ProductType.values());
-            model.addAttribute("formAction", "/admin/products");
+            model.addAttribute("formAction", AdminPaths.Products.URL);
             model.addAttribute("pageTitle", "New Product");
-            return "admin/products/form";
+            return AdminPaths.Products.VIEW_FORM;
         }
         try {
             productService.create(request);
             redirectAttributes.addFlashAttribute("successMessage", "Product created successfully.");
-            return "redirect:/admin/products";
+            return "redirect:" + AdminPaths.Products.URL;
         } catch (ResourceNotFoundException e) {
             model.addAttribute("errorMessage", e.getMessage());
-            model.addAttribute("categories", categoryService.getAll());
-            model.addAttribute("productTypes", ProductType.values());
-            model.addAttribute("formAction", "/admin/products");
+            model.addAttribute("formAction", AdminPaths.Products.URL);
             model.addAttribute("pageTitle", "New Product");
-            return "admin/products/form";
+            return AdminPaths.Products.VIEW_FORM;
         }
     }
 
@@ -86,25 +96,16 @@ public class AdminProductController {
             RedirectAttributes redirectAttributes) {
         try {
             ProductResponse existing = productService.getByIdForAdmin(id);
-            ProductRequest form = new ProductRequest();
-            form.setName(existing.getName());
-            form.setDescription(existing.getDescription());
-            form.setPrice(existing.getPrice());
-            form.setType(existing.getType());
-            form.setStockQuantity(existing.getStockQuantity());
-            form.setCategoryId(existing.getCategoryId());
-            model.addAttribute("product", form);
+            model.addAttribute("product", ProductRequest.fromResponse(existing));
             model.addAttribute("productDetail", existing);
-            model.addAttribute("categories", categoryService.getAll());
-            model.addAttribute("productTypes", ProductType.values());
             model.addAttribute("productId", id);
-            model.addAttribute("formAction", "/admin/products/" + id);
+            model.addAttribute("formAction", AdminPaths.Products.URL + "/" + id);
             model.addAttribute("pageTitle", "Edit Product");
         } catch (ResourceNotFoundException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-            return "redirect:/admin/products";
+            return "redirect:" + AdminPaths.Products.URL;
         }
-        return "admin/products/form";
+        return AdminPaths.Products.VIEW_FORM;
     }
 
     @PostMapping("/{id}")
@@ -116,14 +117,14 @@ public class AdminProductController {
         if (bindingResult.hasErrors()) {
             try {
                 model.addAttribute("productDetail", productService.getByIdForAdmin(id));
-            } catch (ResourceNotFoundException ignored) {
+            } catch (ResourceNotFoundException e) {
+                redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+                return "redirect:" + AdminPaths.Products.URL;
             }
-            model.addAttribute("categories", categoryService.getAll());
-            model.addAttribute("productTypes", ProductType.values());
             model.addAttribute("productId", id);
-            model.addAttribute("formAction", "/admin/products/" + id);
+            model.addAttribute("formAction", AdminPaths.Products.URL + "/" + id);
             model.addAttribute("pageTitle", "Edit Product");
-            return "admin/products/form";
+            return AdminPaths.Products.VIEW_FORM;
         }
         try {
             productService.updateForAdmin(id, request);
@@ -131,7 +132,7 @@ public class AdminProductController {
         } catch (ResourceNotFoundException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
-        return "redirect:/admin/products/" + id + "/edit";
+        return "redirect:" + AdminPaths.Products.URL + "/" + id + "/edit";
     }
 
     @PostMapping("/{id}/delete")
@@ -142,7 +143,7 @@ public class AdminProductController {
         } catch (ResourceNotFoundException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
-        return "redirect:/admin/products";
+        return "redirect:" + AdminPaths.Products.URL;
     }
 
     @PostMapping("/{id}/restore")
@@ -153,7 +154,7 @@ public class AdminProductController {
         } catch (ResourceNotFoundException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
-        return "redirect:/admin/products";
+        return "redirect:" + AdminPaths.Products.URL;
     }
 
     /**
@@ -171,7 +172,7 @@ public class AdminProductController {
         } catch (ResourceNotFoundException | BadRequestException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
-        return "redirect:/admin/products/" + id + "/edit";
+        return "redirect:" + AdminPaths.Products.URL + "/" + id + "/edit";
     }
 
     @PostMapping("/{id}/images/{imageId}/delete")
@@ -184,6 +185,6 @@ public class AdminProductController {
         } catch (ResourceNotFoundException | BadRequestException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
-        return "redirect:/admin/products/" + id + "/edit";
+        return "redirect:" + AdminPaths.Products.URL + "/" + id + "/edit";
     }
 }

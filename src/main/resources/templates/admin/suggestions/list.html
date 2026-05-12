@@ -63,7 +63,9 @@
         </div>
       </div>
 
-      <div class="mt-3" th:replace="~{fragments/layout :: pagination(${suggestions}, '/admin/suggestions')}"></div>
+      <div class="mt-3">
+        <div th:replace="~{fragments/layout :: pagination(${suggestions}, '/admin/suggestions')}"></div>
+      </div>
 
     </main>
   </div>

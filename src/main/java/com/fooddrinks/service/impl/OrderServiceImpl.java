@@ -159,6 +159,11 @@ public class OrderServiceImpl implements OrderService {
             OrderStatus.CANCELLED, Set.of());
 
     @Override
+    public Set<OrderStatus> getAllowedTransitions(OrderStatus current) {
+        return VALID_TRANSITIONS.getOrDefault(current, Set.of());
+    }
+
+    @Override
     @Transactional(readOnly = true)
     @PreAuthorize("hasRole('ADMIN')")
     public Page<AdminOrderSummaryResponse> getAllOrdersForAdmin(Pageable pageable) {

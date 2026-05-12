@@ -14,6 +14,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import com.fooddrinks.util.AdminPaths;
+import com.fooddrinks.util.ApiPaths;
+
 import lombok.RequiredArgsConstructor;
 
 @Configuration
@@ -36,18 +39,18 @@ public class SecurityConfig {
     @Order(1)
     public SecurityFilterChain adminFilterChain(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/admin/**")
+                .securityMatcher(AdminPaths.ROOT + "/**")
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/admin/login").permitAll()
+                        .requestMatchers(AdminPaths.Login.URL).permitAll()
                         .anyRequest().hasRole("ADMIN"))
                 .formLogin(form -> form
-                        .loginPage("/admin/login")
-                        .loginProcessingUrl("/admin/login")
-                        .defaultSuccessUrl("/admin/dashboard", true)
-                        .failureUrl("/admin/login?error"))
+                        .loginPage(AdminPaths.Login.URL)
+                        .loginProcessingUrl(AdminPaths.Login.URL)
+                        .defaultSuccessUrl(AdminPaths.Dashboard.URL, true)
+                        .failureUrl(AdminPaths.Login.URL + "?error"))
                 .logout(logout -> logout
-                        .logoutUrl("/admin/logout")
-                        .logoutSuccessUrl("/admin/login?logout")
+                        .logoutUrl(AdminPaths.Login.LOGOUT_URL)
+                        .logoutSuccessUrl(AdminPaths.Login.URL + "?logout")
                         .deleteCookies("JSESSIONID")
                         .invalidateHttpSession(true))
                 .sessionManagement(session -> session
@@ -57,7 +60,7 @@ public class SecurityConfig {
                         .changeSessionId())
                 .exceptionHandling(ex -> ex
                         // Non-admin authenticated users get 403 → redirect to login
-                        .accessDeniedPage("/admin/login?denied"));
+                        .accessDeniedPage(AdminPaths.Login.URL + "?denied"));
         return http.build();
     }
 
@@ -73,10 +76,11 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // Public: product & category browsing (GET only) + static files
-                        .requestMatchers(HttpMethod.GET, "/api/products/**", "/api/categories/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, ApiPaths.Products.URL + "/**", ApiPaths.Categories.URL + "/**")
+                        .permitAll()
                         .requestMatchers("/uploads/**").permitAll()
                         // Auth endpoints are public
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(ApiPaths.Auth.URL + "/**").permitAll()
                         // Everything else requires a valid JWT
                         .anyRequest().authenticated())
                 // Return ApiResponse JSON for 401/403 instead of Spring's default HTML/empty

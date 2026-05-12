@@ -1,12 +1,5 @@
 package com.fooddrinks.controller.api;
 
-import com.fooddrinks.common.ApiResponse;
-import com.fooddrinks.dto.request.LoginRequest;
-import com.fooddrinks.dto.request.RegisterRequest;
-import com.fooddrinks.dto.response.AuthResponse;
-import com.fooddrinks.service.AuthService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,8 +7,18 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fooddrinks.common.ApiResponse;
+import com.fooddrinks.dto.request.LoginRequest;
+import com.fooddrinks.dto.request.RegisterRequest;
+import com.fooddrinks.dto.response.AuthResponse;
+import com.fooddrinks.service.AuthService;
+import com.fooddrinks.util.ApiPaths;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping(ApiPaths.Auth.URL)
 @RequiredArgsConstructor
 public class AuthController {
 

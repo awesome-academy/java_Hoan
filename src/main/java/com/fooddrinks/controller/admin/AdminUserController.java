@@ -1,9 +1,5 @@
 package com.fooddrinks.controller.admin;
 
-import com.fooddrinks.dto.response.UserResponse;
-import com.fooddrinks.exception.ResourceNotFoundException;
-import com.fooddrinks.service.UserService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -17,8 +13,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import com.fooddrinks.dto.response.UserResponse;
+import com.fooddrinks.exception.ResourceNotFoundException;
+import com.fooddrinks.service.UserService;
+import com.fooddrinks.util.AdminPaths;
+
+import lombok.RequiredArgsConstructor;
+
 @Controller
-@RequestMapping("/admin/users")
+@RequestMapping(AdminPaths.Users.URL)
 @PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
 public class AdminUserController {
@@ -33,19 +36,19 @@ public class AdminUserController {
                 PageRequest.of(page, PAGE_SIZE, Sort.by("createdAt").descending()));
         model.addAttribute("users", users);
         model.addAttribute("currentPage", page);
-        return "admin/users/list";
+        return AdminPaths.Users.VIEW_LIST;
     }
 
     @GetMapping("/{id}")
     public String detail(@PathVariable Long id, Model model,
-                         RedirectAttributes redirectAttributes) {
+            RedirectAttributes redirectAttributes) {
         try {
             model.addAttribute("user", userService.getUserById(id));
         } catch (ResourceNotFoundException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-            return "redirect:/admin/users";
+            return "redirect:" + AdminPaths.Users.URL;
         }
-        return "admin/users/detail";
+        return AdminPaths.Users.VIEW_DETAIL;
     }
 
     /**
@@ -54,7 +57,7 @@ public class AdminUserController {
      */
     @PostMapping("/{id}/toggle-active")
     public String toggleActive(@PathVariable Long id,
-                                RedirectAttributes redirectAttributes) {
+            RedirectAttributes redirectAttributes) {
         try {
             UserResponse user = userService.toggleActive(id);
             String status = Boolean.TRUE.equals(user.getIsActive()) ? "activated" : "deactivated";
@@ -63,6 +66,6 @@ public class AdminUserController {
         } catch (ResourceNotFoundException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
-        return "redirect:/admin/users";
+        return "redirect:" + AdminPaths.Users.URL;
     }
 }

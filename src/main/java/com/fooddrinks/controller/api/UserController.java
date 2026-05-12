@@ -1,11 +1,5 @@
 package com.fooddrinks.controller.api;
 
-import com.fooddrinks.common.ApiResponse;
-import com.fooddrinks.dto.request.UpdateProfileRequest;
-import com.fooddrinks.dto.response.UserResponse;
-import com.fooddrinks.service.UserService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -15,8 +9,17 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fooddrinks.common.ApiResponse;
+import com.fooddrinks.dto.request.UpdateProfileRequest;
+import com.fooddrinks.dto.response.UserResponse;
+import com.fooddrinks.service.UserService;
+import com.fooddrinks.util.ApiPaths;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping(ApiPaths.Users.URL)
 @RequiredArgsConstructor
 public class UserController {
 

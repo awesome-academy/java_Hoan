@@ -19,11 +19,12 @@ import com.fooddrinks.entity.OrderStatus;
 import com.fooddrinks.exception.BadRequestException;
 import com.fooddrinks.exception.ResourceNotFoundException;
 import com.fooddrinks.service.OrderService;
+import com.fooddrinks.util.AdminPaths;
 
 import lombok.RequiredArgsConstructor;
 
 @Controller
-@RequestMapping("/admin/orders")
+@RequestMapping(AdminPaths.Orders.URL)
 @PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
 public class AdminOrderController {
@@ -38,8 +39,7 @@ public class AdminOrderController {
                 PageRequest.of(page, PAGE_SIZE, Sort.by("createdAt").descending()));
         model.addAttribute("orders", orders);
         model.addAttribute("currentPage", page);
-        model.addAttribute("allStatuses", OrderStatus.values());
-        return "admin/orders/list";
+        return AdminPaths.Orders.VIEW_LIST;
     }
 
     @GetMapping("/{id}")
@@ -48,12 +48,12 @@ public class AdminOrderController {
         try {
             AdminOrderDetailResponse order = orderService.getOrderByIdForAdmin(id);
             model.addAttribute("order", order);
-            model.addAttribute("allStatuses", OrderStatus.values());
+            model.addAttribute("allowedStatuses", orderService.getAllowedTransitions(order.getStatus()));
         } catch (ResourceNotFoundException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-            return "redirect:/admin/orders";
+            return "redirect:" + AdminPaths.Orders.URL;
         }
-        return "admin/orders/detail";
+        return AdminPaths.Orders.VIEW_DETAIL;
     }
 
     /**
@@ -68,9 +68,12 @@ public class AdminOrderController {
             orderService.updateOrderStatus(id, status);
             redirectAttributes.addFlashAttribute("successMessage",
                     "Order #" + id + " status updated to " + status + ".");
-        } catch (ResourceNotFoundException | BadRequestException e) {
+        } catch (ResourceNotFoundException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            return "redirect:" + AdminPaths.Orders.URL;
+        } catch (BadRequestException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
-        return "redirect:/admin/orders/" + id;
+        return "redirect:" + AdminPaths.Orders.URL + "/" + id;
     }
 }
