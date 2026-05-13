@@ -18,29 +18,28 @@ spring:
       max-file-size: 10MB
       max-request-size: 10MB
 
-  # OAuth2 config — will be enabled on Day 8
-  # security:
-  #   oauth2:
-  #     client:
-  #       registration:
-  #         google:
-  #           client-id: YOUR_GOOGLE_CLIENT_ID
-  #           client-secret: YOUR_GOOGLE_CLIENT_SECRET
-  #           scope: email, profile
-  #         facebook:
-  #           client-id: YOUR_FACEBOOK_CLIENT_ID
-  #           client-secret: YOUR_FACEBOOK_CLIENT_SECRET
-  #           scope: email, public_profile
-  #         twitter:
-  #           client-id: YOUR_TWITTER_CLIENT_ID
-  #           client-secret: YOUR_TWITTER_CLIENT_SECRET
-  #           provider: twitter
-  #       provider:
-  #         twitter:
-  #           authorization-uri: https://twitter.com/i/oauth2/authorize
-  #           token-uri: https://api.twitter.com/2/oauth2/token
-  #           user-info-uri: https://api.twitter.com/2/users/me
-  #           user-name-attribute: data
+  # OAuth2 Social Login — Day 8
+  # Replace placeholder values with real credentials from each provider's developer console.
+  # Google:   https://console.cloud.google.com/apis/credentials
+  # Facebook: https://developers.facebook.com/apps
+  # Apple:    https://developer.apple.com/account/resources/identifiers/list/serviceId
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:YOUR_GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET:YOUR_GOOGLE_CLIENT_SECRET}
+            # scope handled in OAuth2ClientConfig
+          facebook:
+            client-id: ${FACEBOOK_CLIENT_ID:YOUR_FACEBOOK_CLIENT_ID}
+            client-secret: ${FACEBOOK_CLIENT_SECRET:YOUR_FACEBOOK_CLIENT_SECRET}
+            # scope + userInfoUri handled in OAuth2ClientConfig
+          apple:
+            # Services ID (e.g. com.yourcompany.app) — NOT the App ID
+            client-id: ${APPLE_CLIENT_ID:YOUR_APPLE_SERVICE_ID}
+            # client-secret is generated at runtime by AppleClientSecretGenerator (ES256 JWT)
+            client-secret: PLACEHOLDER_GENERATED_AT_RUNTIME
 
   mail:
     host: smtp.gmail.com
@@ -62,9 +61,25 @@ app:
     dir: uploads/
   slack:
     webhook-url: YOUR_SLACK_WEBHOOK_URL
+  # OAuth2 redirect — where the browser is sent after social login with ?token=<jwt>
+  oauth2:
+    redirect-uri: ${APP_OAUTH2_REDIRECT_URI:http://localhost:8080/oauth2/callback}
+  # Apple Sign In credentials
+  # team-id:    10-character Team ID from Apple Developer portal (e.g. AB12CD34EF)
+  # key-id:     Key ID printed in the .p8 file header (e.g. ABCDE12345)
+  # private-key: full PEM content of your .p8 file (multiline OK in YAML)
+  apple:
+    team-id: ${APPLE_TEAM_ID:YOUR_APPLE_TEAM_ID}
+    key-id: ${APPLE_KEY_ID:YOUR_APPLE_KEY_ID}
+    private-key: ${APPLE_PRIVATE_KEY:YOUR_APPLE_PRIVATE_KEY}
   admin:
     # Set create=true to bootstrap the admin account on startup.
     # Override email/password via env vars (APP_ADMIN_EMAIL / APP_ADMIN_PASSWORD) in production.
     create: true
     email: admin@foodsdrinks.com
     password: Admin@123456
+
+logging:
+  level:
+    com.fooddrinks.service.impl.CustomOAuth2UserService: DEBUG
+    com.fooddrinks.service.impl.CustomOidcUserService: DEBUG

@@ -81,4 +81,15 @@ public final class ApiPaths {
 
         public static final String URL = API + "/ratings";
     }
+
+    /**
+     * OAuth2 login flow paths — managed by Spring Security, not application controllers.
+     * Used in SecurityConfig to permit these URLs without authentication.
+     */
+    public static final class OAuth2 {
+        private OAuth2() {}
+
+        public static final String AUTHORIZE = "/oauth2/authorization";
+        public static final String CALLBACK  = "/login/oauth2/code";
+    }
 }

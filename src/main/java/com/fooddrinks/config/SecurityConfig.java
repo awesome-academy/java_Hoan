@@ -11,9 +11,12 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import com.fooddrinks.service.impl.CustomOAuth2UserService;
+import com.fooddrinks.service.impl.CustomOidcUserService;
 import com.fooddrinks.util.AdminPaths;
 import com.fooddrinks.util.ApiPaths;
 
@@ -28,6 +31,11 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ApiAuthenticationEntryPoint authEntryPoint;
     private final ApiAccessDeniedHandler accessDeniedHandler;
+    private final ClientRegistrationRepository clientRegistrationRepository;
+    private final CustomOidcUserService customOidcUserService;
+    private final CustomOAuth2UserService customOAuth2UserService;
+    private final OAuth2SuccessHandler oAuth2SuccessHandler;
+    private final OAuth2FailureHandler oAuth2FailureHandler;
 
     /**
      * Admin UI filter chain — session-based form login.
@@ -65,15 +73,21 @@ public class SecurityConfig {
     }
 
     /**
-     * API filter chain — stateless JWT.
-     * Handles /api/** and all other routes not matched by adminFilterChain.
+     * API filter chain — stateless JWT + OAuth2 social login.
+     *
+     * Session policy: IF_REQUIRED allows Spring Security to create a temporary
+     * session during the OAuth2 handshake (needed for state parameter storage).
+     * After success, OAuth2SuccessHandler invalidates the session and issues a JWT;
+     * all subsequent API calls are authenticated statelessly via JwtAuthenticationFilter.
      */
     @Bean
     @Order(2)
     public SecurityFilterChain apiFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // IF_REQUIRED: session created only during OAuth2 flow, not for JWT requests
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .authorizeHttpRequests(auth -> auth
                         // Public: product & category browsing (GET only) + static files
                         .requestMatchers(HttpMethod.GET, ApiPaths.Products.URL + "/**", ApiPaths.Categories.URL + "/**")
@@ -81,12 +95,28 @@ public class SecurityConfig {
                         .requestMatchers("/uploads/**").permitAll()
                         // Auth endpoints are public
                         .requestMatchers(ApiPaths.Auth.URL + "/**").permitAll()
-                        // Everything else requires a valid JWT
+                        // OAuth2 flow endpoints — Spring Security handles these internally
+                        .requestMatchers(ApiPaths.OAuth2.AUTHORIZE + "/**",
+                                         ApiPaths.OAuth2.CALLBACK + "/**").permitAll()
+                        // OAuth2 post-login redirect target (receives ?token=... for testing)
+                        .requestMatchers("/oauth2/callback").permitAll()
+                        // Everything else requires a valid JWT or active OAuth2 session
                         .anyRequest().authenticated())
                 // Return ApiResponse JSON for 401/403 instead of Spring's default HTML/empty
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(authEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler))
+                // OAuth2 social login (Google, Facebook, Apple)
+                .oauth2Login(oauth2 -> oauth2
+                        .authorizationEndpoint(auth -> auth
+                                .authorizationRequestResolver(
+                                        new CustomOAuth2AuthorizationRequestResolver(
+                                                clientRegistrationRepository)))
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .oidcUserService(customOidcUserService)   // Google + Apple (OIDC)
+                                .userService(customOAuth2UserService))    // Facebook (OAuth2)
+                        .successHandler(oAuth2SuccessHandler)
+                        .failureHandler(oAuth2FailureHandler))
                 // Validate JWT before Spring Security's own filters
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
