@@ -1,9 +1,5 @@
 package com.fooddrinks.controller.api;
 
-import com.fooddrinks.common.ApiResponse;
-import com.fooddrinks.dto.response.SummaryResponse;
-import com.fooddrinks.service.SummaryService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -11,8 +7,15 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fooddrinks.common.ApiResponse;
+import com.fooddrinks.dto.response.SummaryResponse;
+import com.fooddrinks.service.SummaryService;
+import com.fooddrinks.util.ApiPaths;
+
+import lombok.RequiredArgsConstructor;
+
 @RestController
-@RequestMapping("/api/summary")
+@RequestMapping(ApiPaths.Summary.URL)
 @RequiredArgsConstructor
 public class SummaryController {
 

@@ -19,13 +19,19 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     // Eager-fetch category via JOIN to eliminate N+1 on list queries.
     // Images are handled by @BatchSize on Product.images — no collection fetch here
-    // to avoid
-    // in-memory pagination issues with @OneToMany joins.
+    // to avoid in-memory pagination issues with @OneToMany joins.
     @Override
     @EntityGraph(attributePaths = { "category" })
     Page<Product> findAll(Specification<Product> spec, Pageable pageable);
 
+    // Admin: list ALL products (including inactive) with category eager-loaded.
+    @Override
+    @EntityGraph(attributePaths = { "category" })
+    Page<Product> findAll(Pageable pageable);
+
     boolean existsByCategoryId(Long categoryId);
+
+    long countByIsActive(Boolean isActive);
 
     // Acquires a PESSIMISTIC_WRITE (SELECT ... FOR UPDATE) lock on the product row.
     // Used in addImage() when isPrimary=true to serialize concurrent primary-image

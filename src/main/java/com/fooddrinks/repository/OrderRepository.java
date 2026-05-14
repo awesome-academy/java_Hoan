@@ -2,10 +2,15 @@ package com.fooddrinks.repository;
 
 import com.fooddrinks.dto.response.OrderSummaryResponse;
 import com.fooddrinks.entity.Order;
+import com.fooddrinks.entity.OrderStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -35,4 +40,15 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     // Used by scheduled report job — fetch all orders within a date range
     List<Order> findByCreatedAtBetween(LocalDateTime from, LocalDateTime to);
+
+    // Admin: list all orders with user eager-loaded (avoids N+1 on admin order list).
+    @Override
+    @EntityGraph(attributePaths = {"user"})
+    Page<Order> findAll(Pageable pageable);
+
+    long countByStatus(OrderStatus status);
+
+    /** Total revenue = sum of totalAmount for all COMPLETED orders. COALESCE guards against NULL when no rows exist. */
+    @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o WHERE o.status = :status")
+    BigDecimal sumTotalAmountByStatus(@Param("status") OrderStatus status);
 }

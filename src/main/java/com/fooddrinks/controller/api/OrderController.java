@@ -1,12 +1,7 @@
 package com.fooddrinks.controller.api;
 
-import com.fooddrinks.common.ApiResponse;
-import com.fooddrinks.dto.request.PlaceOrderRequest;
-import com.fooddrinks.dto.response.OrderResponse;
-import com.fooddrinks.dto.response.OrderSummaryResponse;
-import com.fooddrinks.service.OrderService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,10 +13,18 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import com.fooddrinks.common.ApiResponse;
+import com.fooddrinks.dto.request.PlaceOrderRequest;
+import com.fooddrinks.dto.response.OrderResponse;
+import com.fooddrinks.dto.response.OrderSummaryResponse;
+import com.fooddrinks.service.OrderService;
+import com.fooddrinks.util.ApiPaths;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/orders")
+@RequestMapping(ApiPaths.Orders.URL)
 @RequiredArgsConstructor
 public class OrderController {
 

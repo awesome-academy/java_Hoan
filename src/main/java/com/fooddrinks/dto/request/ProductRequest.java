@@ -1,6 +1,10 @@
 package com.fooddrinks.dto.request;
 
+import java.math.BigDecimal;
+
+import com.fooddrinks.dto.response.ProductResponse;
 import com.fooddrinks.entity.ProductType;
+
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -10,12 +14,25 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.math.BigDecimal;
-
 @Getter
 @Setter
 @NoArgsConstructor
 public class ProductRequest {
+
+    /**
+     * Creates a ProductRequest pre-populated from an existing product (for edit
+     * forms).
+     */
+    public static ProductRequest fromResponse(ProductResponse r) {
+        ProductRequest req = new ProductRequest();
+        req.setName(r.getName());
+        req.setDescription(r.getDescription());
+        req.setPrice(r.getPrice());
+        req.setType(r.getType());
+        req.setStockQuantity(r.getStockQuantity());
+        req.setCategoryId(r.getCategoryId());
+        return req;
+    }
 
     @NotBlank(message = "Product name is required")
     @Size(max = 255, message = "Product name must not exceed 255 characters")

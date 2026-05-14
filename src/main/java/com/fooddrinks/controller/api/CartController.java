@@ -1,12 +1,5 @@
 package com.fooddrinks.controller.api;
 
-import com.fooddrinks.common.ApiResponse;
-import com.fooddrinks.dto.request.AddCartItemRequest;
-import com.fooddrinks.dto.request.UpdateCartItemRequest;
-import com.fooddrinks.dto.response.CartResponse;
-import com.fooddrinks.service.CartService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -19,8 +12,18 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fooddrinks.common.ApiResponse;
+import com.fooddrinks.dto.request.AddCartItemRequest;
+import com.fooddrinks.dto.request.UpdateCartItemRequest;
+import com.fooddrinks.dto.response.CartResponse;
+import com.fooddrinks.service.CartService;
+import com.fooddrinks.util.ApiPaths;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
 @RestController
-@RequestMapping("/api/cart")
+@RequestMapping(ApiPaths.Cart.URL)
 @RequiredArgsConstructor
 public class CartController {
 
