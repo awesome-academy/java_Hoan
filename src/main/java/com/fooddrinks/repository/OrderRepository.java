@@ -38,8 +38,9 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items WHERE o.id = :id")
     Optional<Order> findByIdWithItems(@Param("id") Long id);
 
-    // Used by scheduled report job — fetch all orders within a date range
-    List<Order> findByCreatedAtBetween(LocalDateTime from, LocalDateTime to);
+    // Used by scheduled report job — fetch all orders within a date range (start inclusive, end EXCLUSIVE)
+    @Query("SELECT o FROM Order o WHERE o.createdAt >= :from AND o.createdAt < :to")
+    List<Order> findByCreatedAtBetween(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
     // Admin: list all orders with user eager-loaded (avoids N+1 on admin order list).
     @Override

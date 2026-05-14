@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -24,6 +25,7 @@ import com.fooddrinks.entity.OrderItem;
 import com.fooddrinks.entity.OrderStatus;
 import com.fooddrinks.entity.Product;
 import com.fooddrinks.entity.User;
+import com.fooddrinks.event.OrderPlacedEvent;
 import com.fooddrinks.exception.BadRequestException;
 import com.fooddrinks.exception.ResourceNotFoundException;
 import com.fooddrinks.repository.CartRepository;
@@ -42,6 +44,7 @@ public class OrderServiceImpl implements OrderService {
     private final CartRepository cartRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -115,7 +118,23 @@ public class OrderServiceImpl implements OrderService {
         cart.getItems().clear();
         cartRepository.save(cart);
 
-        // TODO Day 9: fire OrderPlacedEvent here for Slack / Email notifications
+        // Publish event for Slack + Email notifications.
+        // @TransactionalEventListener(AFTER_COMMIT) in NotificationEventListener
+        // ensures this fires only after the transaction commits — no notifications for
+        // rolled-back orders.
+        // Snapshot all data NOW (within TX) to avoid LazyInitializationException in
+        // async listener.
+        List<OrderPlacedEvent.ItemSnapshot> snapshots = savedOrder.getItems().stream()
+                .map(i -> new OrderPlacedEvent.ItemSnapshot(
+                        i.getProductName(), i.getProductPrice(), i.getQuantity(), i.getSubtotal()))
+                .toList();
+        eventPublisher.publishEvent(new OrderPlacedEvent(
+                savedOrder.getId(),
+                user.getEmail(),
+                savedOrder.getTotalAmount(),
+                savedOrder.getShippingAddress(),
+                savedOrder.getNote(),
+                snapshots));
 
         return toOrderResponse(savedOrder);
     }
