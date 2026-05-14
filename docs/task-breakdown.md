@@ -76,11 +76,11 @@
 ## Day 8 — Auth OAuth2 (8h)
 > Làm sau khi core features xong, không block gì
 
-- OAuth2 config: Google, Facebook, Twitter
+- OAuth2 config: Google, Facebook, Apple
 - `CustomOAuth2UserService`: xử lý callback, auto-create user
 - `OAuth2SuccessHandler`: generate JWT sau login thành công
 - Xử lý conflict email (sai provider → trả lỗi rõ ràng)
-- **Output:** Login bằng Google/Facebook/Twitter được
+- **Output:** Login bằng Google/Facebook/Apple được
 
 ---
 

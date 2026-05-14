@@ -1,0 +1,7 @@
+# Dev-only overrides — activated with --spring.profiles.active=dev
+# Never committed with real credentials; debug logging is safe in local environment only.
+
+logging:
+  level:
+    com.fooddrinks.service.impl.CustomOAuth2UserService: DEBUG
+    com.fooddrinks.service.impl.CustomOidcUserService: DEBUG

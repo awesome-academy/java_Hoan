@@ -5,7 +5,7 @@ Ordering platform for food and drinks built with Spring Boot.
 ## Tech Stack
 - Java 25 + Spring Boot 4.0.5
 - Spring Data JPA + Hibernate + MySQL 8
-- Spring Security + JWT + OAuth2 (Google, Facebook, Twitter)
+- Spring Security + JWT + OAuth2 (Google, Facebook, Apple)
 - Thymeleaf (Admin UI) + REST API (User)
 - Docker (MySQL)
 
