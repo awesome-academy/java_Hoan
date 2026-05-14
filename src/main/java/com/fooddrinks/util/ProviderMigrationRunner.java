@@ -1,16 +1,19 @@
 package com.fooddrinks.util;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+
+import javax.sql.DataSource;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * One-time schema migration: changes the {@code users.provider} column enum
@@ -20,9 +23,9 @@ import java.sql.ResultSet;
  * Idempotent — skips if the column already contains APPLE instead of TWITTER.
  *
  * Migration sequence:
- *   1. UPDATE any TWITTER rows to APPLE (should not exist in normal development,
- *      but handled defensively).
- *   2. ALTER TABLE to replace TWITTER with APPLE in the ENUM definition.
+ * 1. UPDATE any TWITTER rows to APPLE (should not exist in normal development,
+ * but handled defensively).
+ * 2. ALTER TABLE to replace TWITTER with APPLE in the ENUM definition.
  *
  * Note on timing: Hibernate's ddl-auto:update runs before ApplicationRunners.
  * If the DB contains TWITTER rows and MySQL strict mode prevents the ALTER,
@@ -43,8 +46,7 @@ public class ProviderMigrationRunner implements ApplicationRunner {
               AND COLUMN_NAME  = 'provider'
             """;
 
-    private static final String MIGRATE_DATA_SQL =
-            "UPDATE users SET provider = 'APPLE' WHERE provider = 'TWITTER'";
+    private static final String MIGRATE_DATA_SQL = "UPDATE users SET provider = 'APPLE' WHERE provider = 'TWITTER'";
 
     private static final String ALTER_COLUMN_SQL = """
             ALTER TABLE users
@@ -54,9 +56,23 @@ public class ProviderMigrationRunner implements ApplicationRunner {
 
     private final DataSource dataSource;
 
+    @Value("${app.migrations.provider-enabled:true}")
+    private boolean migrationEnabled;
+
     @Override
     public void run(ApplicationArguments args) {
+        if (!migrationEnabled) {
+            log.debug("ProviderMigration: disabled via app.migrations.provider-enabled=false — skipping");
+            return;
+        }
         try (Connection conn = dataSource.getConnection()) {
+            // This migration uses MySQL-specific ENUM ALTER syntax — skip on other
+            // databases
+            String dbProduct = conn.getMetaData().getDatabaseProductName();
+            if (!dbProduct.toLowerCase().contains("mysql")) {
+                log.debug("ProviderMigration: skipping — not running on MySQL (detected: {})", dbProduct);
+                return;
+            }
             String columnType = queryColumnType(conn);
             if (columnType == null) {
                 log.debug("ProviderMigration: 'users' table not yet created — skipping");
@@ -74,7 +90,7 @@ public class ProviderMigrationRunner implements ApplicationRunner {
                 int updated = ps.executeUpdate();
                 if (updated > 0) {
                     log.warn("ProviderMigration: {} row(s) with provider=TWITTER were migrated to APPLE",
-                             updated);
+                            updated);
                 }
             }
 
@@ -87,16 +103,16 @@ public class ProviderMigrationRunner implements ApplicationRunner {
 
         } catch (Exception e) {
             log.error("ProviderMigration failed. Run the following SQL manually:\n"
-                      + "  UPDATE users SET provider = 'APPLE' WHERE provider = 'TWITTER';\n"
-                      + "  ALTER TABLE users MODIFY COLUMN provider "
-                      + "ENUM('LOCAL','GOOGLE','FACEBOOK','APPLE') NOT NULL DEFAULT 'LOCAL';",
-                      e);
+                    + "  UPDATE users SET provider = 'APPLE' WHERE provider = 'TWITTER';\n"
+                    + "  ALTER TABLE users MODIFY COLUMN provider "
+                    + "ENUM('LOCAL','GOOGLE','FACEBOOK','APPLE') NOT NULL DEFAULT 'LOCAL';",
+                    e);
         }
     }
 
     private String queryColumnType(Connection conn) throws Exception {
         try (PreparedStatement ps = conn.prepareStatement(CHECK_COLUMN_SQL);
-             ResultSet rs = ps.executeQuery()) {
+                ResultSet rs = ps.executeQuery()) {
             return rs.next() ? rs.getString("COLUMN_TYPE") : null;
         }
     }

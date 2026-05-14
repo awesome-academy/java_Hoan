@@ -78,8 +78,6 @@ app:
     create: true
     email: admin@foodsdrinks.com
     password: Admin@123456
-
-logging:
-  level:
-    com.fooddrinks.service.impl.CustomOAuth2UserService: DEBUG
-    com.fooddrinks.service.impl.CustomOidcUserService: DEBUG
+  migrations:
+    # Set to false to skip the TWITTER→APPLE provider migration on startup.
+    provider-enabled: ${APP_MIGRATIONS_PROVIDER_ENABLED:true}

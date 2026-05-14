@@ -1,13 +1,7 @@
 package com.fooddrinks.config;
 
-import com.fooddrinks.entity.Provider;
-import com.fooddrinks.repository.UserRepository;
-import com.fooddrinks.util.JwtUtil;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.io.IOException;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
@@ -16,18 +10,27 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
+import com.fooddrinks.entity.Provider;
+import com.fooddrinks.repository.UserRepository;
+import com.fooddrinks.util.JwtUtil;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Issues a JWT and redirects to the configured frontend callback URI after
  * a successful OAuth2 / OIDC login.
  *
- * Token delivery: stored in the HTTP session under {@code "oauth2_token"} key,
- * then retrieved and cleared by the callback controller. The token never appears
- * in the URL, avoiding exposure in browser history and server access logs.
- *
- * In production, {@code app.oauth2.redirect-uri} should point to the real frontend;
- * the frontend reads the token from the session via a dedicated exchange endpoint.
+ * Token delivery: appended as a URL fragment {@code #token=<jwt>} on the
+ * redirect URL.
+ * URL fragments are never transmitted to the server — they stay in the browser,
+ * are not recorded in server access logs, and are accessible to JavaScript on
+ * any origin.
+ * This approach works correctly for both same-origin (local test) and
+ * cross-origin (production SPA) setups.
  */
 @Slf4j
 @Component
@@ -42,8 +45,8 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request,
-                                        HttpServletResponse response,
-                                        Authentication authentication) throws IOException {
+            HttpServletResponse response,
+            Authentication authentication) throws IOException {
         String email = resolveEmail(authentication);
 
         // Gate on account status — user service already checks, but double-check here
@@ -55,15 +58,19 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
         String token = jwtUtil.generateToken(email);
 
-        log.debug("OAuth2 login success — storing token in session for user: {}", email);
+        // Invalidate the temporary OAuth2 session — all subsequent requests use JWT
+        // (stateless)
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
 
-        // Store the token in session so the callback page can display it
-        // without exposing it in the URL (browser history / server logs).
-        // The callback controller will read and immediately remove it.
-        HttpSession session = request.getSession(true);
-        session.setAttribute("oauth2_token", token);
-
-        getRedirectStrategy().sendRedirect(request, response, frontendRedirectUri);
+        // Deliver token via URL fragment — never transmitted to server, avoids
+        // server-log exposure.
+        // Works cross-origin: unlike session cookies, URL fragments are not
+        // domain-bound.
+        log.debug("OAuth2 login success — redirecting to callback for user: {}", email);
+        getRedirectStrategy().sendRedirect(request, response, frontendRedirectUri + "#token=" + token);
     }
 
     /**
@@ -83,7 +90,8 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
         if (principal instanceof OidcUser oidcUser) {
             String email = oidcUser.getEmail();
-            if (email != null) return email;
+            if (email != null)
+                return email;
 
             // Apple subsequent login: email not in id_token — look up by sub + provider
             String providerId = oidcUser.getSubject();
@@ -96,7 +104,8 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
         if (principal instanceof OAuth2User oauth2User) {
             String email = oauth2User.getAttribute("email");
-            if (email != null) return email;
+            if (email != null)
+                return email;
             throw new IllegalStateException(
                     "Email not available from OAuth2 provider: " + registrationId);
         }
@@ -106,9 +115,9 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
     private Provider resolveProvider(String registrationId) {
         return switch (registrationId.toLowerCase()) {
-            case "google"   -> Provider.GOOGLE;
+            case "google" -> Provider.GOOGLE;
             case "facebook" -> Provider.FACEBOOK;
-            case "apple"    -> Provider.APPLE;
+            case "apple" -> Provider.APPLE;
             default -> throw new IllegalStateException("Unknown provider: " + registrationId);
         };
     }
