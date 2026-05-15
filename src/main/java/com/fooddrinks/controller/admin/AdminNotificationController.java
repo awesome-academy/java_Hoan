@@ -64,10 +64,15 @@ public class AdminNotificationController {
         }
 
         try {
-            monthlyReportScheduler.sendMonthlyReport();
+            boolean sent = monthlyReportScheduler.sendMonthlyReport();
             lastTriggered.set(now);
-            redirectAttributes.addFlashAttribute("successMessage",
-                    "Monthly report triggered — check your inbox.");
+            if (sent) {
+                redirectAttributes.addFlashAttribute("successMessage",
+                        "Monthly report triggered — check your inbox.");
+            } else {
+                redirectAttributes.addFlashAttribute("errorMessage",
+                        "Monthly report was not sent — mail is not configured on this server.");
+            }
         } catch (Exception e) {
             // Log full error internally; expose only a generic message to the UI
             // to avoid leaking internal details (SMTP config, class names, etc.)

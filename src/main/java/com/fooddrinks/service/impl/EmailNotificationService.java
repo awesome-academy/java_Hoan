@@ -75,14 +75,15 @@ public class EmailNotificationService {
      * Sends a monthly statistics report to the admin inbox.
      * Called by {@link com.fooddrinks.util.MonthlyReportScheduler}.
      *
-     * @param from   start of the report range (inclusive)
-     * @param to     end of the report range (exclusive)
+     * @param from   start date of the report range (inclusive, at 00:00)
+     * @param to     end date of the report range (exclusive, at 00:00 of this date)
      * @param orders all orders placed in that range
+     * @return {@code true} if the email was sent; {@code false} if mail is not configured
      */
-    public void sendMonthlyReport(LocalDate from, LocalDate to, List<Order> orders) {
+    public boolean sendMonthlyReport(LocalDate from, LocalDate to, List<Order> orders) {
         if (!isConfigured()) {
             log.debug("Mail not configured — skipping monthly report for {} to {}", from, to);
-            return;
+            return false;
         }
 
         String rangeLabel = from.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
@@ -95,6 +96,7 @@ public class EmailNotificationService {
         message.setText(buildMonthlyReportText(rangeLabel, orders));
 
         send(message, "monthly report " + rangeLabel);
+        return true;
     }
 
     // Body builders
@@ -158,12 +160,17 @@ public class EmailNotificationService {
     }
 
     /**
-     * Returns {@code true} only when a real sender address has been set.
-     * The placeholder {@code YOUR_EMAIL@gmail.com} is treated as unconfigured.
+     * Returns {@code true} only when both {@code spring.mail.username} and
+     * {@code app.notification.recipient-email} are set to real values.
+     * Any value starting with {@code YOUR_} (the default placeholder prefix)
+     * or a blank value is treated as unconfigured.
      */
     private boolean isConfigured() {
         return mailFrom != null
                 && !mailFrom.isBlank()
-                && !mailFrom.startsWith("YOUR_");
+                && !mailFrom.startsWith("YOUR_")
+                && recipientEmail != null
+                && !recipientEmail.isBlank()
+                && !recipientEmail.startsWith("YOUR_");
     }
 }

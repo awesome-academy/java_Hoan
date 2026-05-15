@@ -25,8 +25,6 @@ import lombok.extern.slf4j.Slf4j;
  *
  * The method is {@code @Transactional(readOnly = true)} so that the
  * {@code findByCreatedAtBetween} query runs inside a proper Hibernate session.
- * This avoids any lazy-loading issues when {@link EmailNotificationService}
- * iterates over the order list to build the report body.
  */
 @Slf4j
 @Component
@@ -39,15 +37,18 @@ public class MonthlyReportScheduler {
     /**
      * Cron: {@code 0 0 8 1 * *} → 08:00 AM on the 1st day of every month.
      *
-     * The time range is a rolling 1-month window ending at the moment the job runs
-     * (half-open interval {@code [now - 1 month, now)}):
-     * 
-     * start = today - 1 month at 00:00:00 (inclusive)
-     * end = today at 00:00:00 (exclusive — orders placed today not included)
+     * <p>The time range is a rolling calendar-date window using start-of-day
+     * boundaries (half-open interval {@code [today - 1 month, today)}):
+     * <pre>
+     *   start = today - 1 month at 00:00:00  (inclusive)
+     *   end   = today           at 00:00:00  (exclusive — orders placed today not included)
+     * </pre>
+     *
+     * @return {@code true} if the report email was sent; {@code false} if mail is not configured
      */
     @Scheduled(cron = "0 0 8 1 * *")
     @Transactional(readOnly = true)
-    public void sendMonthlyReport() {
+    public boolean sendMonthlyReport() {
         LocalDate today = LocalDate.now();
         LocalDate from = today.minusMonths(1);
 
@@ -60,6 +61,10 @@ public class MonthlyReportScheduler {
 
         log.info("Monthly report: {} orders found", orders.size());
 
-        emailService.sendMonthlyReport(from, today, orders);
+        boolean sent = emailService.sendMonthlyReport(from, today, orders);
+        if (!sent) {
+            log.warn("Monthly report skipped — mail is not configured");
+        }
+        return sent;
     }
 }
