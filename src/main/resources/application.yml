@@ -54,6 +54,7 @@ spring:
             enable: true
 
 app:
+  server-url: ${APP_SERVER_URL:http://localhost:8080}
   jwt:
     secret: YOUR_JWT_SECRET_KEY_MUST_BE_AT_LEAST_32_CHARACTERS_LONG
     expiration-ms: 86400000 # 24 hours
@@ -85,3 +86,11 @@ app:
   migrations:
     # Set to false to skip the TWITTER→APPLE provider migration on startup.
     provider-enabled: ${APP_MIGRATIONS_PROVIDER_ENABLED:true}
+
+springdoc:
+  # Set SWAGGER_ENABLED=false (or omit) in production to prevent API schema exposure.
+  # Swagger UI and /v3/api-docs will return 401 when disabled.
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:true}
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:true}
