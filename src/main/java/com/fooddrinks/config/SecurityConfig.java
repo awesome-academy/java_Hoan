@@ -1,5 +1,6 @@
 package com.fooddrinks.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -27,6 +28,16 @@ import lombok.RequiredArgsConstructor;
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
+
+    /**
+     * Mirrors {@code springdoc.swagger-ui.enabled} — when {@code false} (the
+     * default),
+     * Swagger UI paths are NOT added to the permit list, so they return 401 instead
+     * of
+     * serving the API schema in production.
+     */
+    @Value("${springdoc.swagger-ui.enabled:false}")
+    private boolean swaggerEnabled;
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ApiAuthenticationEntryPoint authEntryPoint;
@@ -78,7 +89,8 @@ public class SecurityConfig {
      * Session policy: IF_REQUIRED allows Spring Security to create a temporary
      * session during the OAuth2 handshake (needed for state parameter storage).
      * After success, OAuth2SuccessHandler invalidates the session and issues a JWT;
-     * all subsequent API calls are authenticated statelessly via JwtAuthenticationFilter.
+     * all subsequent API calls are authenticated statelessly via
+     * JwtAuthenticationFilter.
      */
     @Bean
     @Order(2)
@@ -88,20 +100,29 @@ public class SecurityConfig {
                 // IF_REQUIRED: session created only during OAuth2 flow, not for JWT requests
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
-                .authorizeHttpRequests(auth -> auth
-                        // Public: product & category browsing (GET only) + static files
-                        .requestMatchers(HttpMethod.GET, ApiPaths.Products.URL + "/**", ApiPaths.Categories.URL + "/**")
-                        .permitAll()
-                        .requestMatchers("/uploads/**").permitAll()
-                        // Auth endpoints are public
-                        .requestMatchers(ApiPaths.Auth.URL + "/**").permitAll()
-                        // OAuth2 flow endpoints — Spring Security handles these internally
-                        .requestMatchers(ApiPaths.OAuth2.AUTHORIZE + "/**",
-                                         ApiPaths.OAuth2.CALLBACK + "/**").permitAll()
-                        // OAuth2 post-login redirect target (receives ?token=... for testing)
-                        .requestMatchers("/oauth2/callback").permitAll()
-                        // Everything else requires a valid JWT or active OAuth2 session
-                        .anyRequest().authenticated())
+                .authorizeHttpRequests(auth -> {
+                    // Public: product & category browsing (GET only) + static files
+                    auth.requestMatchers(HttpMethod.GET, ApiPaths.Products.URL + "/**", ApiPaths.Categories.URL + "/**")
+                            .permitAll();
+                    auth.requestMatchers("/uploads/**").permitAll();
+                    // Auth endpoints are public
+                    auth.requestMatchers(ApiPaths.Auth.URL + "/**").permitAll();
+                    // Swagger UI / OpenAPI docs — only permitted when explicitly enabled (dev only)
+                    if (swaggerEnabled) {
+                        auth.requestMatchers(
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/v3/api-docs",
+                                "/v3/api-docs/**").permitAll();
+                    }
+                    // OAuth2 flow endpoints — Spring Security handles these internally
+                    auth.requestMatchers(ApiPaths.OAuth2.AUTHORIZE + "/**",
+                            ApiPaths.OAuth2.CALLBACK + "/**").permitAll();
+                    // OAuth2 post-login redirect target (receives ?token=... for testing)
+                    auth.requestMatchers("/oauth2/callback").permitAll();
+                    // Everything else requires a valid JWT or active OAuth2 session
+                    auth.anyRequest().authenticated();
+                })
                 // Return ApiResponse JSON for 401/403 instead of Spring's default HTML/empty
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(authEntryPoint)
@@ -113,8 +134,8 @@ public class SecurityConfig {
                                         new CustomOAuth2AuthorizationRequestResolver(
                                                 clientRegistrationRepository)))
                         .userInfoEndpoint(userInfo -> userInfo
-                                .oidcUserService(customOidcUserService)   // Google + Apple (OIDC)
-                                .userService(customOAuth2UserService))    // Facebook (OAuth2)
+                                .oidcUserService(customOidcUserService) // Google + Apple (OIDC)
+                                .userService(customOAuth2UserService)) // Facebook (OAuth2)
                         .successHandler(oAuth2SuccessHandler)
                         .failureHandler(oAuth2FailureHandler))
                 // Validate JWT before Spring Security's own filters
