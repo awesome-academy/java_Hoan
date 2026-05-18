@@ -44,8 +44,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: YOUR_EMAIL@gmail.com
-    password: YOUR_APP_PASSWORD
+    username: ${MAIL_USERNAME:YOUR_MAIL_USERNAME}
+    password: ${MAIL_PASSWORD:YOUR_MAIL_PASSWORD}
     properties:
       mail:
         smtp:
@@ -60,7 +60,7 @@ app:
   upload:
     dir: uploads/
   slack:
-    webhook-url: YOUR_SLACK_WEBHOOK_URL
+    webhook-url: ${SLACK_WEBHOOK_URL:YOUR_SLACK_WEBHOOK_URL}
   # OAuth2 redirect — where the browser is sent after social login with ?token=<jwt>
   oauth2:
     redirect-uri: ${APP_OAUTH2_REDIRECT_URI:http://localhost:8080/oauth2/callback}
@@ -78,6 +78,10 @@ app:
     create: true
     email: admin@foodsdrinks.com
     password: Admin@123456
+  notification:
+    # Email address that receives order alerts and monthly reports.
+    # Separate from app.admin.email (the DB account) so credentials don't conflict.
+    recipient-email: ${NOTIFICATION_RECIPIENT_EMAIL:YOUR_NOTIFICATION_RECIPIENT_EMAIL}
   migrations:
     # Set to false to skip the TWITTER→APPLE provider migration on startup.
     provider-enabled: ${APP_MIGRATIONS_PROVIDER_ENABLED:true}
